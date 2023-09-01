@@ -1,12 +1,13 @@
 package binance
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"golang.org/x/exp/slog"
 )
 
 type OrderBookUpdate struct {
@@ -22,6 +23,8 @@ type WebSocket struct {
 	conn      *websocket.Conn
 	symbol    string
 	reconnect bool
+
+	logger *slog.Logger
 }
 
 type SubscriptionMessage struct {
@@ -30,7 +33,10 @@ type SubscriptionMessage struct {
 	ID     int      `json:"id"`
 }
 
-const subscriptionMethod = "SUBSCRIBE"
+const (
+	subscriptionMethod   = "SUBSCRIBE"
+	maxReconnectAttempts = 5
+)
 
 func (ws *WebSocket) connect() error {
 	// url := fmt.Sprintf("wss://stream.binance.com:9443/ws/%s@depth", symbol)
@@ -42,8 +48,8 @@ func (ws *WebSocket) connect() error {
 	return nil
 }
 
-func NewWebSocketConnection(reconnect bool) (*WebSocket, error) {
-	ws := &WebSocket{reconnect: reconnect}
+func NewWebSocketConnection(logger *slog.Logger, reconnect bool) (*WebSocket, error) {
+	ws := &WebSocket{reconnect: reconnect, logger: logger}
 	if err := ws.connect(); err != nil {
 		return nil, err
 	}
@@ -66,35 +72,60 @@ func (ws *WebSocket) Subscribe(symbol string) error {
 	return ws.conn.WriteMessage(websocket.TextMessage, message)
 }
 
-func (ws *WebSocket) ReceiveUpdates(ch chan OrderBookUpdate) {
+func (ws *WebSocket) ReceiveUpdates(ctx context.Context, ch chan OrderBookUpdate) {
+	var reconnectAttempts int
+	backoffDuration := 5 * time.Second
+
 	for {
 		_, data, err := ws.conn.ReadMessage()
 		if err != nil {
-			log.Println("Error reading message:", err)
+			ws.logger.Info(fmt.Sprintf("Error reading message: %v", err))
 
-			if !ws.reconnect {
+			if !ws.reconnect || reconnectAttempts >= maxReconnectAttempts {
 				close(ch)
 				return
 			}
-			time.Sleep(5 * time.Second)
-			if err := ws.Reconnect(); err == nil {
-				_ = ws.Subscribe(ws.symbol)
+
+			select {
+			case <-time.After(backoffDuration):
+				err := ws.Reconnect()
+				if err != nil {
+					reconnectAttempts++
+					backoffDuration *= 2
+					ws.logger.Warn(fmt.Sprintf("Reconnection attempt %d failed: %v", reconnectAttempts, err))
+					continue
+				}
+
+				err = ws.Subscribe(ws.symbol)
+				if err != nil {
+					reconnectAttempts++
+					backoffDuration *= 2
+					ws.logger.Warn(fmt.Sprintf("Subscription attempt %d for %s failed: %v", reconnectAttempts, ws.symbol, err))
+					continue
+				}
+
+				reconnectAttempts = 0
+				backoffDuration = 5 * time.Second
+
+			case <-ctx.Done():
+				ws.logger.Info("Received shutdown signal, exiting...")
+				return
 			}
 		}
-
-		// fmt.Println("Received raw data:", string(data)) // Print raw data
 
 		var update OrderBookUpdate
 		err = json.Unmarshal(data, &update)
 		if err != nil {
-			log.Println("Error un marshalling data:", err)
+			ws.logger.Info(fmt.Sprintf("Error un marshalling data: %v", err))
 			continue
 		}
 
-		// fmt.Printf("Update received: %v\n", update)
-
-		// Send the update to the provided channel
-		ch <- update
+		select {
+		case ch <- update:
+			ws.logger.Info("new data received")
+		default:
+			ws.logger.Warn("No receiver for update, discarding")
+		}
 	}
 }
 

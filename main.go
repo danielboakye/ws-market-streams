@@ -2,13 +2,16 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"github.com/ws-binance/internal/ws/binance"
+	"golang.org/x/exp/slog"
 )
 
 var (
@@ -24,7 +27,7 @@ func init() {
 func main() {
 	flag.Parse()
 
-	binanceWS, err := binance.NewWebSocketConnection(reconnectWebsocketFlag)
+	binanceWS, err := binance.NewWebSocketConnection(slog.New(slog.NewTextHandler(os.Stdout, nil)), reconnectWebsocketFlag)
 	if err != nil {
 		log.Fatal("Error creating WebSocket:", err)
 	}
@@ -35,21 +38,22 @@ func main() {
 		log.Fatal("Error subscribing:", err)
 	}
 
-	updates := make(chan binance.OrderBookUpdate)
-	go binanceWS.ReceiveUpdates(updates)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	updates := make(chan binance.OrderBookUpdate, 100)
+	go binanceWS.ReceiveUpdates(ctx, updates)
 
 	for update := range updates {
 		fmt.Printf("Received update: %v\n", update)
 	}
 
-	// Handle graceful shutdown on Ctrl+C
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 
-	<-c
-	binanceWS.Close()
+	<-signalChan
 	fmt.Println("Shutting down...")
+	cancel()
+	binanceWS.Close()
 
-	// Keep the main Goroutine running to receive updates.
-	// select {}
 }
