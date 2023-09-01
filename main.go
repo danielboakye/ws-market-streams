@@ -42,9 +42,11 @@ func main() {
 	updates := make(chan binance.OrderBookUpdate, 100)
 	go binanceWS.ReceiveUpdates(ctx, updates)
 
-	for update := range updates {
-		fmt.Printf("Received update: %v\n", update)
-	}
+	go func() {
+		for update := range updates {
+			fmt.Printf("Received update: %v\n", update)
+		}
+	}()
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
