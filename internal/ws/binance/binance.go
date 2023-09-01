@@ -18,7 +18,7 @@ type OrderBookUpdate struct {
 	Asks      [][]string `json:"a"`
 }
 
-type BinanceWebSocket struct {
+type WebSocket struct {
 	conn      *websocket.Conn
 	symbol    string
 	reconnect bool
@@ -32,7 +32,7 @@ type SubscriptionMessage struct {
 
 const subscriptionMethod = "SUBSCRIBE"
 
-func (ws *BinanceWebSocket) connect() error {
+func (ws *WebSocket) connect() error {
 	// url := fmt.Sprintf("wss://stream.binance.com:9443/ws/%s@depth", symbol)
 	conn, _, err := websocket.DefaultDialer.Dial("wss://stream.binance.com:9443/ws/depth", nil)
 	if err != nil {
@@ -42,15 +42,15 @@ func (ws *BinanceWebSocket) connect() error {
 	return nil
 }
 
-func NewWSConnection(reconnect bool) (*BinanceWebSocket, error) {
-	ws := &BinanceWebSocket{reconnect: reconnect}
+func NewWebSocketConnection(reconnect bool) (*WebSocket, error) {
+	ws := &WebSocket{reconnect: reconnect}
 	if err := ws.connect(); err != nil {
 		return nil, err
 	}
 	return ws, nil
 }
 
-func (ws *BinanceWebSocket) Subscribe(symbol string) error {
+func (ws *WebSocket) Subscribe(symbol string) error {
 	ws.symbol = symbol
 	subscription := &SubscriptionMessage{
 		Method: subscriptionMethod,
@@ -66,7 +66,7 @@ func (ws *BinanceWebSocket) Subscribe(symbol string) error {
 	return ws.conn.WriteMessage(websocket.TextMessage, message)
 }
 
-func (ws *BinanceWebSocket) ReceiveUpdates(ch chan OrderBookUpdate) {
+func (ws *WebSocket) ReceiveUpdates(ch chan OrderBookUpdate) {
 	for {
 		_, data, err := ws.conn.ReadMessage()
 		if err != nil {
@@ -98,10 +98,10 @@ func (ws *BinanceWebSocket) ReceiveUpdates(ch chan OrderBookUpdate) {
 	}
 }
 
-func (ws *BinanceWebSocket) Reconnect() error {
+func (ws *WebSocket) Reconnect() error {
 	return ws.connect()
 }
 
-func (ws *BinanceWebSocket) Close() error {
+func (ws *WebSocket) Close() error {
 	return ws.conn.Close()
 }

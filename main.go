@@ -24,7 +24,7 @@ func init() {
 func main() {
 	flag.Parse()
 
-	binanceWS, err := binance.NewWSConnection(reconnectWebsocketFlag)
+	binanceWS, err := binance.NewWebSocketConnection(reconnectWebsocketFlag)
 	if err != nil {
 		log.Fatal("Error creating WebSocket:", err)
 	}
