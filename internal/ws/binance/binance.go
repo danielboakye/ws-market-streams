@@ -111,6 +111,7 @@ func (ws *WebSocket) ReceiveUpdates(ctx context.Context, ch chan OrderBookUpdate
 
 			case <-ctx.Done():
 				ws.logger.Info("Received shutdown signal, exiting...")
+				close(ch)
 				return
 			}
 		}
