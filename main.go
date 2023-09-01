@@ -16,12 +16,10 @@ import (
 
 var (
 	reconnectWebsocketFlag bool
-	port                   string
 )
 
 func init() {
 	flag.BoolVar(&reconnectWebsocketFlag, "reconnect", true, "Enable or disable automatic reconnection to the WebSocket.")
-	flag.StringVar(&port, "port", "8080", "Web server port")
 }
 
 func main() {
@@ -33,7 +31,7 @@ func main() {
 	}
 	defer binanceWS.Close()
 
-	err = binanceWS.Subscribe("btcusdt")
+	err = binanceWS.Subscribe(binance.BTCUSDT)
 	if err != nil {
 		log.Fatal("Error subscribing:", err)
 	}

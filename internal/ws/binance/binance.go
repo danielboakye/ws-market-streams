@@ -36,6 +36,8 @@ type SubscriptionMessage struct {
 const (
 	subscriptionMethod   = "SUBSCRIBE"
 	maxReconnectAttempts = 5
+
+	BTCUSDT = "btcusdt"
 )
 
 func (ws *WebSocket) connect() error {
