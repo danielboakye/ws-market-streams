@@ -119,7 +119,7 @@ func (ws *WebSocket) ReceiveUpdates(ctx context.Context, ch chan OrderBookUpdate
 		var update OrderBookUpdate
 		err = json.Unmarshal(data, &update)
 		if err != nil {
-			ws.logger.Error(fmt.Sprintf("Error un marshalling data: %v", err))
+			ws.logger.Error(fmt.Sprintf("Error unmarshalling data: %v", err))
 			continue
 		}
 
