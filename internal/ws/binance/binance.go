@@ -34,8 +34,9 @@ type SubscriptionMessage struct {
 }
 
 const (
-	subscriptionMethod   = "SUBSCRIBE"
-	maxReconnectAttempts = 5
+	subscriptionMethod     = "SUBSCRIBE"
+	maxReconnectAttempts   = 5
+	defaultBackoffDuration = 5 * time.Second
 
 	BTCUSDT = "btcusdt"
 )
@@ -76,7 +77,7 @@ func (ws *WebSocket) Subscribe(symbol string) error {
 
 func (ws *WebSocket) ReceiveUpdates(ctx context.Context, ch chan OrderBookUpdate) {
 	var reconnectAttempts int
-	backoffDuration := 5 * time.Second
+	backoffDuration := defaultBackoffDuration
 
 	for {
 		_, data, err := ws.conn.ReadMessage()
@@ -107,7 +108,7 @@ func (ws *WebSocket) ReceiveUpdates(ctx context.Context, ch chan OrderBookUpdate
 				}
 
 				reconnectAttempts = 0
-				backoffDuration = 5 * time.Second
+				backoffDuration = defaultBackoffDuration
 
 			case <-ctx.Done():
 				ws.logger.Info("Received shutdown signal, exiting...")
