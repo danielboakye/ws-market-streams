@@ -81,7 +81,7 @@ func (ws *WebSocket) ReceiveUpdates(ctx context.Context, ch chan OrderBookUpdate
 	for {
 		_, data, err := ws.conn.ReadMessage()
 		if err != nil {
-			ws.logger.Info(fmt.Sprintf("Error reading message: %v", err))
+			ws.logger.Error(fmt.Sprintf("Error reading message: %v", err))
 
 			if !ws.reconnect || reconnectAttempts >= maxReconnectAttempts {
 				close(ch)
@@ -119,7 +119,7 @@ func (ws *WebSocket) ReceiveUpdates(ctx context.Context, ch chan OrderBookUpdate
 		var update OrderBookUpdate
 		err = json.Unmarshal(data, &update)
 		if err != nil {
-			ws.logger.Info(fmt.Sprintf("Error un marshalling data: %v", err))
+			ws.logger.Error(fmt.Sprintf("Error un marshalling data: %v", err))
 			continue
 		}
 
@@ -127,7 +127,7 @@ func (ws *WebSocket) ReceiveUpdates(ctx context.Context, ch chan OrderBookUpdate
 		case ch <- update:
 			ws.logger.Info("new data received")
 		default:
-			ws.logger.Warn("No receiver for update, discarding")
+			ws.logger.Info("No receiver for update, discarding")
 		}
 	}
 }
