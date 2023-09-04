@@ -53,6 +53,5 @@ func main() {
 	<-signalChan
 	fmt.Println("Shutting down...")
 	cancel()
-	binanceWS.Close()
 
 }
