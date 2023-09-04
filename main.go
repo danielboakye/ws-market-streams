@@ -51,7 +51,6 @@ func main() {
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 
 	<-signalChan
-	fmt.Println("Shutting down...")
 	cancel()
 
 }
