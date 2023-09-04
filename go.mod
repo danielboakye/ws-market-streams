@@ -1,4 +1,4 @@
-module github.com/ws-binance
+module github.com/danielboakye/ws-market-streams
 
 go 1.20
 

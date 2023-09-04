@@ -9,7 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/ws-binance/internal/ws/binance"
+	"github.com/danielboakye/ws-market-streams/internal/ws/binance"
 	"golang.org/x/exp/slog"
 )
 
